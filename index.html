@@ -128,6 +128,10 @@ td.note-cell{ padding:6px 10px; }
   background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
   padding:7px 8px; color:var(--text); font-family:var(--body); font-size:12.5px; cursor:pointer;
 }
+.setup-status-select.status-new_not_started{ background:#93C5FD; border-color:#93C5FD; color:#0B0F19; font-weight:600; }
+.setup-status-select.status-in_progress{ background:#F5A623; border-color:#F5A623; color:#0B0F19; font-weight:600; }
+.setup-status-select.status-complete{ background:#1c97a6; border-color:#1c97a6; color:#FFFFFF; font-weight:600; }
+.setup-status-select.status-canceled{ background:#6B7280; border-color:#6B7280; color:#FFFFFF; font-weight:600; }
 .status-select:focus{ outline:none; border-color:var(--accent); }
 td.delete-cell{ padding:6px 10px; text-align:center; }
 .delete-row-btn{
@@ -1240,7 +1244,7 @@ function renderSection(key, rows, hasHits){
         <td class="company">${escapeHtml(r.accountName)}</td>
         <td class="note-cell"><div class="note-wrap"><input class="note-input" type="text" placeholder="Add a note…" data-noteid="${escapeHtml(upId)}" value="${escapeHtml(noteVal)}"><button type="button" class="copy-note-btn" data-noteid="${escapeHtml(upId)}" title="Copy script"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div></td>
         ${(key === 'new' || key === 'pending' || key === 'installed' || key === 'canceled') ? `<td class="note-cell assignee-col"><input class="assignee-input" type="text" placeholder="Unassigned" data-assigneeid="${escapeHtml(upId)}" value="${escapeHtml(assigneeVal)}"></td>` : ''}
-        <td class="note-cell setup-status-col"><select class="setup-status-select" data-setupstatusid="${escapeHtml(upId)}">
+        <td class="note-cell setup-status-col"><select class="setup-status-select status-${setupStatus}" data-setupstatusid="${escapeHtml(upId)}">
           <option value="new_not_started" ${setupStatus==='new_not_started'?'selected':''}>New Not Started</option>
           <option value="in_progress" ${setupStatus==='in_progress'?'selected':''}>Set-Up In Progress</option>
           <option value="complete" ${setupStatus==='complete'?'selected':''}>Set-Up Complete</option>
@@ -1389,6 +1393,8 @@ document.addEventListener('change', async e=>{
   if(!(e.target.classList && e.target.classList.contains('setup-status-select'))) return;
   const key = e.target.dataset.setupstatusid;
   const status = e.target.value;
+  const keptClasses = e.target.className.split(/\s+/).filter(c => c && !c.startsWith('status-'));
+  e.target.className = [...keptClasses, 'status-' + status].join(' ');
   await saveSetupStatus(key, status);
   render();
 });
