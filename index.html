@@ -1615,8 +1615,9 @@ function updateOppOwnerVisibility(scope){
 
 function updateMasterOnlyColumnsVisibility(scope){
   const isMaster = scope === 'MASTER';
-  appRoot.classList.toggle('hide-assignee', !isMaster);
-  appRoot.classList.toggle('hide-setup-status', !isMaster);
+  const showAssigneeAndSetupStatus = scope === 'MASTER' || scope === 'STREAM';
+  appRoot.classList.toggle('hide-assignee', !showAssigneeAndSetupStatus);
+  appRoot.classList.toggle('hide-setup-status', !showAssigneeAndSetupStatus);
   appRoot.classList.toggle('hide-agency-status', !isMaster);
 }
 
