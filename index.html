@@ -101,9 +101,9 @@ td.mono{ font-family:var(--mono); font-size:12px; }
 td.note-cell{ padding:6px 10px; }
 .note-wrap{ position:relative; display:flex; align-items:center; }
 .note-input{
-  width:200px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+  min-width:120px; max-width:480px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
   padding:7px 34px 7px 10px; color:var(--text); font-family:var(--body); font-size:12.5px;
-  transition: border-color .15s ease;
+  transition: border-color .15s ease, width .1s ease;
 }
 .note-input:focus{ outline:none; border-color:var(--accent); }
 .note-input.saved{ border-color: var(--success); }
@@ -1246,7 +1246,7 @@ function renderSection(key, rows, hasHits){
       return `
       <tr>
         <td class="company">${escapeHtml(r.accountName)}</td>
-        <td class="note-cell"><div class="note-wrap"><input class="note-input" type="text" placeholder="Add a note…" data-noteid="${escapeHtml(upId)}" value="${escapeHtml(noteVal)}"><button type="button" class="copy-note-btn" data-noteid="${escapeHtml(upId)}" title="Copy script"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div></td>
+        <td class="note-cell"><div class="note-wrap"><input class="note-input" type="text" placeholder="Add a note…" data-noteid="${escapeHtml(upId)}" value="${escapeHtml(noteVal)}" style="width:${Math.max(14, noteVal.length + 3)}ch"><button type="button" class="copy-note-btn" data-noteid="${escapeHtml(upId)}" title="Copy script"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div></td>
         ${(key === 'new' || key === 'pending' || key === 'installed' || key === 'canceled') ? `<td class="note-cell assignee-col"><input class="assignee-input" type="text" placeholder="Unassigned" data-assigneeid="${escapeHtml(upId)}" value="${escapeHtml(assigneeVal)}"></td>` : ''}
         <td class="note-cell setup-status-col"><select class="setup-status-select status-${setupStatus}" data-setupstatusid="${escapeHtml(upId)}">
           <option value="new_not_started" style="background:#93C5FD;color:#0B0F19;" ${setupStatus==='new_not_started'?'selected':''}>New Not Started</option>
@@ -1365,6 +1365,7 @@ document.addEventListener('input', e=>{
   if(!(e.target.classList && e.target.classList.contains('note-input'))) return;
   const noteId = e.target.dataset.noteid;
   const text = e.target.value;
+  e.target.style.width = Math.max(14, text.length + 3) + 'ch';
   e.target.classList.remove('saved');
   clearTimeout(noteSaveTimers[noteId]);
   noteSaveTimers[noteId] = setTimeout(async ()=>{
