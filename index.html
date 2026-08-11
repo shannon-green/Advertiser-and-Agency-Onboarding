@@ -92,7 +92,9 @@ thead th.sortable-th.sort-active .sort-arrow{ opacity:1; }
 tbody td{ padding:11px 20px; border-bottom:1px solid var(--border); color:var(--text-dim); white-space:nowrap;}
 tbody tr:hover{ background:var(--surface-2); }
 tbody tr:last-child td{ border-bottom:none; }
-td.company{ color:var(--text); font-weight:500; }
+td.company{ color:var(--text); font-weight:500; position:sticky; left:0; background:var(--surface); z-index:2; box-shadow:2px 0 4px rgba(0,0,0,0.35); }
+tbody tr:hover td.company{ background:var(--surface-2); }
+thead th[data-sortkey="accountName"]{ position:sticky; left:0; background:var(--surface); z-index:3; box-shadow:2px 0 4px rgba(0,0,0,0.35); }
 td.mono{ font-family:var(--mono); font-size:12px; }
 .table-scroll{ overflow-x:auto; max-height:360px; overflow-y:auto; }
 .empty-state{ padding:44px 20px; text-align:center; color:var(--text-faint); font-size:13px; }
