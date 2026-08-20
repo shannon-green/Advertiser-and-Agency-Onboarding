@@ -687,12 +687,23 @@ let lastAgencyFilename = null;
 let pendingDeleteRowIndex = null;
 let lastActiveUploadedAt = null;
 
+// Normalizes an account name for identity matching: collapses repeated whitespace, trims
+// trailing punctuation, and uppercases — so "ABC Motors", "ABC  Motors.", and " abc motors "
+// are all recognized as the same account instead of creating duplicates.
+function normalizeAccountName(name){
+  return (name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;:]+$/, '')
+    .toUpperCase();
+}
+
 function identityKeyFor(r){
   const o = (r.ohqId || '').trim().toUpperCase();
   if(o) return `OHQ:${o}`;
   const c = (r.channelOhqId || '').trim().toUpperCase();
   if(c) return c;
-  const n = (r.accountName || '').trim().toUpperCase();
+  const n = normalizeAccountName(r.accountName);
   return n ? `NAME:${n}` : '';
 }
 
@@ -945,7 +956,7 @@ function rowIdentifiers(r){
   if(o) ids.push(`OHQ:${o}`);
   const c = (r.channelOhqId || '').trim().toUpperCase();
   if(c) ids.push(`CHOHQ:${c}`);
-  const n = (r.accountName || '').trim().toUpperCase();
+  const n = normalizeAccountName(r.accountName);
   if(n) ids.push(`NAME:${n}`);
   return ids;
 }
