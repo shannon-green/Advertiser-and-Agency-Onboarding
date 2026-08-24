@@ -433,7 +433,7 @@ footer{ margin-top:30px; display:flex; justify-content:space-between; align-item
 
 <script>
 const UPLOAD_PASSWORD = "ProdOps";
-const POLL_MS = 8000;
+const POLL_MS = 3600000; // 1 hour — manual refresh still works instantly any time
 
 function showStorageError(message){
   const banner = document.getElementById('storageErrorBanner');
@@ -1732,8 +1732,33 @@ if(alreadyUnlockedScope && VIEW_LABELS[alreadyUnlockedScope]){
 }
 
 // ---------- Init + polling ----------
+// Polling only exists so other people's uploads/edits show up without a manual refresh.
+// Manual refresh always works instantly regardless of this interval — it re-runs the same
+// loadStoredData() call below, just once, rather than on a timer.
+let pollIntervalId = null;
+
+function startPolling(){
+  if(pollIntervalId) return; // already running
+  pollIntervalId = setInterval(loadStoredData, POLL_MS);
+}
+
+function stopPolling(){
+  if(!pollIntervalId) return;
+  clearInterval(pollIntervalId);
+  pollIntervalId = null;
+}
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    stopPolling(); // no point pinging the database for a tab nobody's looking at
+  } else {
+    loadStoredData(); // catch up immediately on whatever changed while this tab was in the background
+    startPolling();
+  }
+});
+
 loadStoredData();
-setInterval(loadStoredData, POLL_MS);
+if(!document.hidden){ startPolling(); }
 </script>
 </body>
 </html>
