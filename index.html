@@ -987,9 +987,9 @@ function mergeOnboardingKeepingExisting(existingRows, newRows){
       ids.forEach(id => idMap.set(id, newIdx));
       return;
     }
-    const oldKey = identityKeyFor(merged[matchIdx]);
+    const oldKey = standardRowKey(merged[matchIdx]);
     merged[matchIdx] = { ...merged[matchIdx], ...r };
-    const newKey = identityKeyFor(merged[matchIdx]);
+    const newKey = standardRowKey(merged[matchIdx]);
     if(oldKey && newKey && oldKey !== newKey){
       keyMigrations.push({ oldKey, newKey });
     }
