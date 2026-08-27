@@ -50,6 +50,8 @@ header{ display:flex; align-items:center; justify-content:space-between; padding
 .btn{ font-family:var(--body); font-weight:600; font-size:13px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); padding:9px 15px; cursor:pointer; transition:all .15s ease; white-space:nowrap;}
 .btn:hover{ border-color:var(--accent); color:#fff; }
 .btn-primary{ background:var(--accent); border-color:var(--accent); color:#0B0F19; }
+.btn-tag-request{ background:#F5A623; border-color:#F5A623; color:#0B0F19; font-weight:600; }
+.btn-tag-request:hover{ background:#FFB84D; border-color:#FFB84D; color:#0B0F19; }
 .btn-primary:hover{ background:#6690FF; color:#0B0F19; }
 .btn-ghost{ background:transparent; }
 .btn-sm{ padding:6px 12px; font-size:12px; border-radius:7px; }
@@ -163,7 +165,10 @@ footer{ margin-top:30px; display:flex; justify-content:space-between; align-item
 .modal h3{ font-family:var(--display); font-size:17px; margin-bottom:6px; }
 .modal p.sub{ font-size:13px; color:var(--text-dim); margin-bottom:20px; }
 .modal input[type=password]{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:11px 14px; color:var(--text); font-family:var(--mono); font-size:14px; margin-bottom:10px;}
-.modal input:focus{ outline:none; border-color:var(--accent); }
+.modal input[type=text], .modal select{ width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:11px 14px; color:var(--text); font-family:var(--body); font-size:14px; margin-bottom:10px;}
+.modal select{ cursor:pointer; }
+.modal label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.03em;}
+.modal input:focus, .modal select:focus{ outline:none; border-color:var(--accent); }
 .modal .err{ color:var(--danger); font-size:12.5px; margin-bottom:12px; min-height:16px; }
 .modal-actions{ display:flex; gap:10px; margin-top:6px; }
 .modal-actions .btn{ flex:1; text-align:center; }
@@ -210,6 +215,7 @@ footer{ margin-top:30px; display:flex; justify-content:space-between; align-item
 #appRoot.hide-setup-status .setup-status-col{ display:none; }
 #appRoot.hide-agency-status .agency-status-col{ display:none; }
 #appRoot.hide-oppowner-filter .oppowner-filter{ display:none; }
+#appRoot:not(.show-tag-request-btn) #submitTagRequestBtn{ display:none; }
 </style>
 </head>
 <body>
@@ -235,6 +241,7 @@ footer{ margin-top:30px; display:flex; justify-content:space-between; align-item
   <div class="header-right">
     <div id="viewBadge" class="view-badge"></div>
     <div id="liveDot"><span class="dot"></span> Live</div>
+    <button class="btn btn-tag-request" id="submitTagRequestBtn">Submit Tag Request</button>
     <button class="btn" id="switchViewBtn">Switch View</button>
     <button class="btn" id="openUploadBtn">Upload Files</button>
   </div>
@@ -427,6 +434,35 @@ footer{ margin-top:30px; display:flex; justify-content:space-between; align-item
     <div class="modal-actions">
       <button class="btn" id="cancelDeleteRowBtn">Cancel</button>
       <button class="btn btn-danger-ghost" id="confirmDeleteRowBtn">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Submit Tag Request modal (Stream view only) -->
+<div class="modal-overlay" id="tagRequestOverlay">
+  <div class="modal">
+    <h3>Submit Tag Request</h3>
+    <p class="sub">Adds a new account to New Onboardings.</p>
+    <label for="tagReqAccountName">Account Name</label>
+    <input type="text" id="tagReqAccountName" placeholder="Account Name">
+    <label for="tagReqCoreChannelId">Core Channel ID</label>
+    <input type="text" id="tagReqCoreChannelId" placeholder="Core Channel ID">
+    <label for="tagReqWebsite">Website</label>
+    <input type="text" id="tagReqWebsite" placeholder="https://…">
+    <label for="tagReqChannel">Channel</label>
+    <select id="tagReqChannel">
+      <option value="">Select a channel…</option>
+      <option value="Stream Companies">Stream Companies</option>
+      <option value="Stream | OEM">Stream | OEM</option>
+      <option value="Apex Service Partners">Apex Service Partners</option>
+      <option value="Malone Media Group">Malone Media Group</option>
+      <option value="The Retail Agency">The Retail Agency</option>
+      <option value="Nexstar Audience Builder">Nexstar Audience Builder</option>
+    </select>
+    <div class="err" id="tagReqErr"></div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelTagReqBtn">Cancel</button>
+      <button class="btn btn-primary" id="submitTagReqBtn">Submit</button>
     </div>
   </div>
 </div>
@@ -1616,6 +1652,52 @@ document.getElementById('confirmDeleteRowBtn').addEventListener('click', async (
   if(rowIndex !== null && rowIndex !== undefined && !isNaN(rowIndex)){ await deleteOnboardingRow(rowIndex); }
 });
 
+// ---------- Submit Tag Request (Stream view only) ----------
+const tagRequestOverlay = document.getElementById('tagRequestOverlay');
+const tagReqErr = document.getElementById('tagReqErr');
+
+document.getElementById('submitTagRequestBtn').addEventListener('click', ()=>{
+  document.getElementById('tagReqAccountName').value = '';
+  document.getElementById('tagReqCoreChannelId').value = '';
+  document.getElementById('tagReqWebsite').value = '';
+  document.getElementById('tagReqChannel').value = '';
+  tagReqErr.textContent = '';
+  tagRequestOverlay.classList.add('show');
+});
+
+document.getElementById('cancelTagReqBtn').addEventListener('click', ()=>{
+  tagRequestOverlay.classList.remove('show');
+});
+
+document.getElementById('submitTagReqBtn').addEventListener('click', async ()=>{
+  const accountName = document.getElementById('tagReqAccountName').value.trim();
+  const coreChannelId = document.getElementById('tagReqCoreChannelId').value.trim();
+  const website = document.getElementById('tagReqWebsite').value.trim();
+  const channel = document.getElementById('tagReqChannel').value;
+
+  if(!accountName){ tagReqErr.textContent = 'Account Name is required.'; return; }
+  if(!channel){ tagReqErr.textContent = 'Please select a Channel.'; return; }
+
+  const newRow = {
+    accountName, ohqId: '', channelOhqId: '', coreChannelId, website, channel,
+  };
+
+  const existingKeysBefore = new Set(onboardData.map(identityKeyFor).filter(Boolean));
+  const mergeResult = mergeOnboardingKeepingExisting(onboardData, [newRow]);
+  onboardData = mergeResult.rows;
+  await migrateSideDataKeys(mergeResult.keyMigrations);
+  await persistOnboardRows();
+
+  const newlyAddedRows = [newRow].filter(r => {
+    const k = identityKeyFor(r);
+    return k && !existingKeysBefore.has(k);
+  });
+  await autoAssignRotation(newlyAddedRows);
+
+  tagRequestOverlay.classList.remove('show');
+  render();
+});
+
 // ---------- Site-wide password gate (channel-scoped views) ----------
 const gateOverlay = document.getElementById('siteGateOverlay');
 const gateInput = document.getElementById('siteGateInput');
@@ -1675,6 +1757,10 @@ function updateOppOwnerFilterVisibility(scope){
   appRoot.classList.toggle('hide-oppowner-filter', !shouldShow);
 }
 
+function updateTagRequestButtonVisibility(scope){
+  appRoot.classList.toggle('show-tag-request-btn', scope === 'STREAM');
+}
+
 function updatePipelineVisibility(scope){
   const isAgencyOnlyView = scope === 'NEW_AGENCY';
   const showAgencyPanels = scope === 'NEW_AGENCY' || scope === 'MASTER';
@@ -1695,6 +1781,7 @@ function unlockSite(scope){
   updateOppOwnerVisibility(scope);
   updateMasterOnlyColumnsVisibility(scope);
   updateOppOwnerFilterVisibility(scope);
+  updateTagRequestButtonVisibility(scope);
   updatePipelineVisibility(scope);
   try{ sessionStorage.setItem('stream_onboarding_view', scope); }catch(e){}
   render();
