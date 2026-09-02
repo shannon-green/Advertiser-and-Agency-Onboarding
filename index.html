@@ -134,6 +134,14 @@ td.note-cell{ padding:6px 10px; }
   padding:7px 10px; color:var(--text); font-family:var(--body); font-size:12.5px;
   transition: border-color .15s ease;
 }
+.id-edit-input{
+  width:110px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+  padding:7px 10px; color:var(--text); font-family:var(--mono); font-size:12px;
+  transition: border-color .15s ease;
+}
+.id-edit-input:focus{ outline:none; border-color:var(--accent); }
+.id-edit-input.saved{ border-color:var(--success); }
+.id-edit-input::placeholder{ color:var(--text-faint); font-family:var(--body); }
 .assignee-input:focus{ outline:none; border-color:var(--accent); }
 .assignee-input.saved{ border-color: var(--success); }
 .assignee-input::placeholder{ color:var(--text-faint); }
@@ -861,6 +869,23 @@ async function saveAssigneeOverride(ohqId, text){
   }catch(e){ /* best-effort */ }
 }
 
+// Manual edit of OHQ ID / Channel OHQ ID for Stream-channel accounts, where these often aren't
+// generated yet and the team wants to speed things along. Targets the exact row by its position
+// (not by identity), matching how delete already works, and migrates notes/assignee/status keys
+// if the edit changes the account's standardRowKey (e.g. going from name-only to having an OHQ ID).
+async function saveIdEdit(rowIndex, field, value){
+  if(rowIndex === null || rowIndex === undefined || rowIndex < 0 || rowIndex >= onboardData.length) return;
+  if(field !== 'ohqId' && field !== 'channelOhqId') return;
+  const row = onboardData[rowIndex];
+  const oldKey = standardRowKey(row);
+  row[field] = value.trim();
+  const newKey = standardRowKey(row);
+  if(oldKey && newKey && oldKey !== newKey){
+    await migrateSideDataKeys([{ oldKey, newKey }]);
+  }
+  await persistOnboardRows();
+}
+
 // Manual status for New Agency accounts (New / In Progress / Complete). Complete moves the
 // account into the "Agency Set-Up Complete" group in that view.
 async function saveAgencyStatus(ohqId, status){
@@ -1024,7 +1049,12 @@ function mergeOnboardingKeepingExisting(existingRows, newRows){
       return;
     }
     const oldKey = standardRowKey(merged[matchIdx]);
-    merged[matchIdx] = { ...merged[matchIdx], ...r };
+    const existingRow = merged[matchIdx];
+    // A blank value from the file should never erase a value that's already there (whether it came
+    // from an earlier file or was typed in manually) — the file only ever fills these in, never clears them.
+    const keepOhqId = (!r.ohqId && existingRow.ohqId) ? existingRow.ohqId : r.ohqId;
+    const keepChannelOhqId = (!r.channelOhqId && existingRow.channelOhqId) ? existingRow.channelOhqId : r.channelOhqId;
+    merged[matchIdx] = { ...existingRow, ...r, ohqId: keepOhqId, channelOhqId: keepChannelOhqId };
     const newKey = standardRowKey(merged[matchIdx]);
     if(oldKey && newKey && oldKey !== newKey){
       keyMigrations.push({ oldKey, newKey });
@@ -1333,8 +1363,12 @@ function renderSection(key, rows, hasHits){
           <option value="complete" style="background:#1c97a6;color:#FFFFFF;" ${setupStatus==='complete'?'selected':''}>Set-Up Complete</option>
           <option value="canceled" style="background:#6B7280;color:#FFFFFF;" ${setupStatus==='canceled'?'selected':''}>Canceled</option>
         </select></td>
-        <td class="mono">${escapeHtml(r.ohqId)}</td>
-        <td class="mono">${escapeHtml(r.channelOhqId)}</td>
+        ${viewScopeForChannel(r.channel) === 'STREAM'
+          ? `<td class="mono"><input class="id-edit-input" type="text" data-rowindex="${r.__rowIndex}" data-field="ohqId" value="${escapeHtml(r.ohqId)}" placeholder="OHQ ID"></td>`
+          : `<td class="mono">${escapeHtml(r.ohqId)}</td>`}
+        ${viewScopeForChannel(r.channel) === 'STREAM'
+          ? `<td class="mono"><input class="id-edit-input" type="text" data-rowindex="${r.__rowIndex}" data-field="channelOhqId" value="${escapeHtml(r.channelOhqId)}" placeholder="Channel OHQ ID"></td>`
+          : `<td class="mono">${escapeHtml(r.channelOhqId)}</td>`}
         <td class="mono core-channel-col">${escapeHtml(r.coreChannelId)}</td>
         <td class="mono">${escapeHtml(r.website)}</td>
         <td>${escapeHtml(r.channel)}</td>
@@ -1465,6 +1499,23 @@ document.addEventListener('input', e=>{
   }, 600);
 });
 
+let idEditTimers = {};
+document.addEventListener('input', e=>{
+  if(!(e.target.classList && e.target.classList.contains('id-edit-input'))) return;
+  const rowIndex = parseInt(e.target.dataset.rowindex, 10);
+  const field = e.target.dataset.field;
+  const value = e.target.value;
+  const timerKey = rowIndex + '_' + field;
+  e.target.classList.remove('saved');
+  clearTimeout(idEditTimers[timerKey]);
+  idEditTimers[timerKey] = setTimeout(async ()=>{
+    await saveIdEdit(rowIndex, field, value);
+    e.target.classList.add('saved');
+    setTimeout(()=> e.target.classList.remove('saved'), 900);
+    render();
+  }, 600);
+});
+
 document.addEventListener('change', async e=>{
   if(!(e.target.classList && e.target.classList.contains('status-select'))) return;
   const ohqId = e.target.dataset.statusid;
@@ -1509,7 +1560,7 @@ function render(){
   document.getElementById('cardCanceled').textContent = b.canceled.length;
 
   const activeEl = document.activeElement;
-  const isTypingNote = activeEl && activeEl.classList && (activeEl.classList.contains('note-input') || activeEl.classList.contains('assignee-input'));
+  const isTypingNote = activeEl && activeEl.classList && (activeEl.classList.contains('note-input') || activeEl.classList.contains('assignee-input') || activeEl.classList.contains('id-edit-input'));
   if(!isTypingNote){
     renderSection('new', b.new, false);
     renderSection('pending', b.pending, true);
