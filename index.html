@@ -155,6 +155,10 @@ td.note-cell{ padding:6px 10px; }
 .setup-status-select.status-pending_channel{ background:#F9A8D4; border-color:#F9A8D4; color:#0B0F19; font-weight:600; }
 .setup-status-select.status-complete{ background:#1c97a6; border-color:#1c97a6; color:#FFFFFF; font-weight:600; }
 .setup-status-select.status-canceled{ background:#6B7280; border-color:#6B7280; color:#FFFFFF; font-weight:600; }
+.status-select.status-new{ background:#93C5FD; border-color:#93C5FD; color:#0B0F19; font-weight:600; }
+.status-select.status-in_progress{ background:#F5A623; border-color:#F5A623; color:#0B0F19; font-weight:600; }
+.status-select.status-ftadmin_setup_in_progress{ background:#E5566B; border-color:#E5566B; color:#FFFFFF; font-weight:600; }
+.status-select.status-complete{ background:#2FBF71; border-color:#2FBF71; color:#0B0F19; font-weight:600; }
 .status-select:focus{ outline:none; border-color:var(--accent); }
 td.delete-cell{ padding:6px 10px; text-align:center; }
 .delete-row-btn{
@@ -1431,10 +1435,11 @@ function renderAgencySection(searchKey, rows, tableId, emptyId, badgeId, noDataY
       <tr>
         <td class="company">${escapeHtml(r.accountName)}</td>
         <td class="note-cell assignee-col"><input class="assignee-input" type="text" placeholder="Unassigned" data-assigneeid="${escapeHtml(upId)}" value="${escapeHtml(assigneeVal)}"></td>
-        <td class="note-cell agency-status-col"><select class="status-select" data-statusid="${escapeHtml(upId)}">
-          <option value="new" ${status==='new'?'selected':''}>New</option>
-          <option value="in_progress" ${status==='in_progress'?'selected':''}>In Progress</option>
-          <option value="complete" ${status==='complete'?'selected':''}>Complete</option>
+        <td class="note-cell agency-status-col"><select class="status-select status-${status}" data-statusid="${escapeHtml(upId)}">
+          <option value="new" style="background:#93C5FD;color:#0B0F19;" ${status==='new'?'selected':''}>New</option>
+          <option value="in_progress" style="background:#F5A623;color:#0B0F19;" ${status==='in_progress'?'selected':''}>In Progress</option>
+          <option value="ftadmin_setup_in_progress" style="background:#E5566B;color:#FFFFFF;" ${status==='ftadmin_setup_in_progress'?'selected':''}>FTAdmin Set Up In Progress</option>
+          <option value="complete" style="background:#2FBF71;color:#0B0F19;" ${status==='complete'?'selected':''}>Complete</option>
         </select></td>
         <td>${escapeHtml(r.selfServeOrManaged)}</td>
         <td>${escapeHtml(r.oppOwner)}</td>
@@ -1520,6 +1525,8 @@ document.addEventListener('change', async e=>{
   if(!(e.target.classList && e.target.classList.contains('status-select'))) return;
   const ohqId = e.target.dataset.statusid;
   const status = e.target.value;
+  const keptClasses = e.target.className.split(/\s+/).filter(c => c && (c === 'status-select' || !c.startsWith('status-')));
+  e.target.className = [...keptClasses, 'status-' + status].join(' ');
   await saveAgencyStatus(ohqId, status);
   renderAgencyPanels();
 });
